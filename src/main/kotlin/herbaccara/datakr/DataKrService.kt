@@ -7,6 +7,7 @@ import herbaccara.boot.autoconfigure.datakr.DataKrProperties
 import herbaccara.datakr.model.Holiday
 import herbaccara.datakr.model.Hopital
 import herbaccara.datakr.model.Result
+import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
 import org.springframework.web.util.UriComponentsBuilder
@@ -19,20 +20,37 @@ class DataKrService(
     private val objectMapper: ObjectMapper,
     private val properties: DataKrProperties
 ) {
+    private fun <T> getForObject(uri: String, params: Map<String, Any>): Result<T> {
+        val endpoint = UriComponentsBuilder
+            .fromHttpUrl("${properties.rootUri}$uri")
+            .queryParams(
+                LinkedMultiValueMap<String, String>().apply {
+                    for ((k, v) in params) {
+                        add(k, v.toString())
+                    }
+                }
+            )
+            .toUriString() + "&ServiceKey=" + URLEncoder.encode(properties.serviceKey, "UTF-8")
+
+        val body: String = restTemplate.getForObject(URI(endpoint))
+
+        return xmlMapper.readValue(body, object : TypeReference<Result<T>>() {})
+    }
+
     /***
      * 국립중앙의료원_국립중앙의료원_전국 병·의원 찾기 서비스 - 병/의원 FullData 내려받기
      * https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15000736
      */
     fun getHsptlMdcncFullDown(pageNo: Int, numOfRows: Int): Result<Hopital> {
-        val uri = UriComponentsBuilder
-            .fromHttpUrl("${properties.rootUri}/B552657/HsptlAsembySearchService/getHsptlMdcncFullDown")
-            .queryParam("pageNo", pageNo)
-            .queryParam("numOfRows", numOfRows)
-            .toUriString() + "&ServiceKey=" + URLEncoder.encode(properties.serviceKey, "UTF-8")
+        val uri = "/B552657/HsptlAsembySearchService/getHsptlMdcncFullDown"
 
-        val body: String = restTemplate.getForObject(URI(uri))
-
-        return xmlMapper.readValue(body, object : TypeReference<Result<Hopital>>() {})
+        return getForObject(
+            uri,
+            mapOf(
+                "pageNo" to pageNo,
+                "numOfRows" to numOfRows
+            )
+        )
     }
 
     /***
@@ -61,15 +79,15 @@ class DataKrService(
      * https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15012690
      */
     fun getRestDeInfo(solYear: Int, solMonth: Int): Result<Holiday> {
-        val uri = UriComponentsBuilder
-            .fromHttpUrl("${properties.rootUri}/B090041/openapi/service/SpcdeInfoService/getRestDeInfo")
-            .queryParam("solYear", solYear)
-            .queryParam("solMonth", solMonth.toString().padStart(2, '0'))
-            .toUriString() + "&ServiceKey=" + URLEncoder.encode(properties.serviceKey, "UTF-8")
+        val uri = "/B090041/openapi/service/SpcdeInfoService/getRestDeInfo"
 
-        val body: String = restTemplate.getForObject(URI(uri))
-
-        return xmlMapper.readValue(body, object : TypeReference<Result<Holiday>>() {})
+        return getForObject(
+            uri,
+            mapOf(
+                "solYear" to solYear,
+                "solMonth" to solMonth.toString().padStart(2, '0')
+            )
+        )
     }
 
     fun getRestDeInfo(solYear: Int): List<Result<Holiday>> {
