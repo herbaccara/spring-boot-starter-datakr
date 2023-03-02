@@ -11,7 +11,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.http.converter.StringHttpMessageConverter
-import org.springframework.web.client.RestTemplate
 import java.nio.charset.StandardCharsets
 import java.util.*
 
@@ -35,10 +34,6 @@ class DataKrAutoConfiguration {
             findAndRegisterModules()
         }
     }
-
-    @Bean
-    @ConditionalOnMissingBean
-    fun restTemplate(): RestTemplate = RestTemplate()
 
     @Bean
     fun dataKrService(
