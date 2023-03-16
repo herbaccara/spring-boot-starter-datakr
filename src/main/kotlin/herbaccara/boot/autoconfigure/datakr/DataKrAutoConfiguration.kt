@@ -1,11 +1,9 @@
 package herbaccara.boot.autoconfigure.datakr
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import herbaccara.datakr.DataKrService
 import org.springframework.boot.autoconfigure.AutoConfiguration
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.client.RestTemplateBuilder
@@ -16,32 +14,17 @@ import java.util.*
 
 @AutoConfiguration
 @EnableConfigurationProperties(DataKrProperties::class)
-@ConditionalOnProperty(prefix = "datakr", value = ["enabled"], havingValue = "true")
+@ConditionalOnProperty(prefix = "datakr", value = ["enabled"], havingValue = "true", matchIfMissing = true)
 class DataKrAutoConfiguration {
 
     @Bean
-    @ConditionalOnMissingBean
-    fun objectMapper(): ObjectMapper {
-        return jacksonObjectMapper().apply {
-            findAndRegisterModules()
-        }
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    fun xmlMapper(): XmlMapper {
-        return XmlMapper().apply {
-            findAndRegisterModules()
-        }
-    }
-
-    @Bean
-    fun dataKrService(
-        objectMapper: ObjectMapper,
-        xmlMapper: XmlMapper,
-        properties: DataKrProperties
-    ): DataKrService {
+    fun dataKrService(properties: DataKrProperties): DataKrService {
         if (properties.serviceKey.isEmpty()) throw NullPointerException()
+
+        val xmlMapper = XmlMapper().apply {
+            findAndRegisterModules()
+            configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, properties.failOnUnknownProperties)
+        }
 
         val restTemplate = RestTemplateBuilder()
             .rootUri(properties.rootUri)
@@ -50,6 +33,6 @@ class DataKrAutoConfiguration {
             )
             .build()
 
-        return DataKrService(restTemplate, xmlMapper, objectMapper, properties)
+        return DataKrService(restTemplate, xmlMapper, properties)
     }
 }
