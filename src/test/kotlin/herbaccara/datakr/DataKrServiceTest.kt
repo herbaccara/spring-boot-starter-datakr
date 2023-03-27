@@ -2,13 +2,17 @@ package herbaccara.datakr
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import herbaccara.boot.autoconfigure.datakr.DataKrAutoConfiguration
 import herbaccara.datakr.model.Hopital
 import herbaccara.datakr.model.Result
+import herbaccara.datakr.model.StanReginCd
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.TestPropertySource
+import java.io.File
 
 @SpringBootTest(
     classes = [
@@ -20,6 +24,10 @@ class DataKrServiceTest {
 
     @Autowired
     lateinit var dataKrService: DataKrService
+
+    private val objectMapper = jacksonObjectMapper().apply {
+        findAndRegisterModules()
+    }
 
     @Test
     fun xmlMapper() {
@@ -48,5 +56,44 @@ class DataKrServiceTest {
     fun getHsptlMdcncFullDown() {
         val hsptlMdcncFullDown = dataKrService.getHsptlMdcncFullDown(1, 1000)
         println(hsptlMdcncFullDown)
+    }
+
+    @Test
+    fun getHsptlMdcncFullDowns() {
+        val hsptlMdcncFullDowns = dataKrService.getHsptlMdcncFullDown(5_000)
+        println()
+    }
+
+    @Test
+    fun getStanReginCdList() {
+        (1..21).forEach {
+            try {
+                val stanReginCdList = dataKrService.getStanReginCdList(it, 1000)
+                val json = objectMapper.writeValueAsString(stanReginCdList)
+                val file = File("src/test/resources/StanReginCd/$it.json")
+                file.writeText(json)
+            } catch (e: Exception) {
+                println("error page $it")
+            }
+        }
+    }
+
+    @Test
+    fun getStanReginCdListFull() {
+        val stanReginCdList = dataKrService.getStanReginCdList(1000)
+        println()
+    }
+
+    @Test
+    fun getStanReginCdListFromJson() {
+        val files = File("src/test/resources/StanReginCd").listFiles() ?: emptyArray()
+        val rows = files.flatMap {
+            val stanReginCd = objectMapper.readValue<StanReginCd>(it.readText())
+            stanReginCd.row
+        }
+        val level1 = rows.filter { it.sggCd == "000" }.sortedBy { it.sidoCd } // 특별시, 광역시, 도
+        val level2 = rows.filter { it.sggCd != "000" && it.umdCd == "000" }
+            .sortedWith(compareBy({ it.sidoCd }, { it.locatOrder }))
+        println()
     }
 }

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import herbaccara.boot.autoconfigure.datakr.DataKrProperties
 import herbaccara.datakr.model.HolidayResult
 import herbaccara.datakr.model.HopitalResult
+import herbaccara.datakr.model.StanReginCd
+import kotlinx.coroutines.*
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
@@ -16,13 +18,15 @@ class DataKrService(
     private val xmlMapper: XmlMapper,
     private val properties: DataKrProperties
 ) {
-    private fun <T> getForObject(uri: String, params: Map<String, Any>, clazz: Class<T>): T {
+    private fun <T> getForObject(uri: String, params: Map<String, Any?>, clazz: Class<T>): T {
         val endpoint = UriComponentsBuilder
             .fromHttpUrl("${properties.rootUri}$uri")
             .queryParams(
                 LinkedMultiValueMap<String, String>().apply {
                     for ((k, v) in params) {
-                        add(k, v.toString())
+                        if (v != null) {
+                            add(k, v.toString())
+                        }
                     }
                 }
             )
@@ -61,8 +65,12 @@ class DataKrService(
             totalPage++
         }
 
-        (1..totalPage)
-            .forEach { pageNo: Int -> block(getHsptlMdcncFullDown(pageNo, numOfRows)) }
+        runBlocking {
+            (1..totalPage)
+                .forEach { pageNo: Int ->
+                    launch(Dispatchers.IO) { block(getHsptlMdcncFullDown(pageNo, numOfRows)) }
+                }
+        }
     }
 
     fun getHsptlMdcncFullDown(numOfRows: Int): List<HopitalResult> {
@@ -89,7 +97,54 @@ class DataKrService(
     }
 
     fun getRestDeInfo(solYear: Int): List<HolidayResult> {
-        return (1..12)
-            .map { getRestDeInfo(solYear, it) }
+        return runBlocking {
+            (1..12)
+                .map {
+                    async(Dispatchers.IO) { getRestDeInfo(solYear, it) }
+                }
+                .awaitAll()
+        }
+    }
+
+    /***
+     * 행정안전부_행정표준코드_법정동코드 - 법정동코드 조회
+     * https://www.data.go.kr/data/15077871/openapi.do?recommendDataYn=Y
+     */
+    @JvmOverloads
+    fun getStanReginCdList(pageNo: Int, numOfRows: Int, locataddNm: String? = null): StanReginCd {
+        val uri = "/1741000/StanReginCd/getStanReginCdList"
+
+        return getForObject(
+            uri,
+            mapOf(
+                "pageNo" to pageNo,
+                "numOfRows" to numOfRows,
+                "type" to "xml",
+                "locatadd_nm" to locataddNm
+            ),
+            StanReginCd::class.java
+        )
+    }
+
+    fun getStanReginCdList(numOfRows: Int, block: (StanReginCd) -> Unit) {
+        val totalCount = getStanReginCdList(1, 1).head.totalCount
+
+        var totalPage = totalCount / numOfRows
+        if (totalCount % numOfRows > 0) {
+            totalPage++
+        }
+
+        runBlocking {
+            (1..totalPage)
+                .forEach { pageNo: Int ->
+                    launch(Dispatchers.IO) { block(getStanReginCdList(pageNo, numOfRows)) }
+                }
+        }
+    }
+
+    fun getStanReginCdList(numOfRows: Int): List<StanReginCd> {
+        val list = mutableListOf<StanReginCd>()
+        getStanReginCdList(numOfRows, list::add)
+        return list
     }
 }
