@@ -8,64 +8,64 @@ import herbaccara.datakr.model.Hopital.Div
 import herbaccara.datakr.model.Hopital.Emcls
 
 data class Hopital(
-    /***
+    /**
      * 일련번호
      */
     val rnum: Int,
 
-    /***
+    /**
      * 주소
      */
     val dutyAddr: String,
 
-    /***
+    /**
      * 병원분류 [Div]
      */
     val dutyDiv: String,
 
-    /***
+    /**
      * 병원분류명
      */
     val dutyDivNam: String,
 
-    /***
+    /**
      * 응급의료기관코드. [Emcls]
      */
     val dutyEmcls: String,
 
-    /***
+    /**
      * 응급의료기관코드명
      */
     val dutyEmclsName: String,
 
-    /***
+    /**
      * 응급실운영여부(1/2). 1 : 운영, 2 : 미운영.
      * 운영이라면 dutyTel3(응급실전화) 에 값이 있다.
      */
     @field:JsonDeserialize(using = BooleanDeserializer::class)
     val dutyEryn: Boolean,
 
-    /***
+    /**
      * 비고
      */
     val dutyEtc: String?,
 
-    /***
+    /**
      * 간이약도
      */
     val dutyMapimg: String?,
 
-    /***
+    /**
      * 기관명
      */
     val dutyName: String,
 
-    /***
+    /**
      * 대표전화1
      */
     val dutyTel1: String,
 
-    /***
+    /**
      * 응급실전화
      */
     val dutyTel3: String?,
@@ -102,38 +102,38 @@ data class Hopital(
     val dutyTime8c: String?,
     val dutyTime8s: String?,
 
-    /***
+    /**
      * 기관ID : 동일테이블에 기관명을 포함하고 있음
      */
     val hpid: String,
 
-    /***
+    /**
      * 우편번호1
      */
     val postCdn1: Int,
 
-    /***
+    /**
      * 우편번호2
      */
     val postCdn2: Int,
 
-    /***
+    /**
      * 병원위도
      */
     val wgs84Lat: Double,
 
-    /***
+    /**
      * 병원경도
      */
     val wgs84Lon: Double,
 
-    /***
+    /**
      * 기관설명상세
      */
     val dutyInf: String?
 ) {
 
-    /***
+    /**
      * 병원 분류
      */
     enum class Div(val text: String) {
@@ -150,7 +150,7 @@ data class Hopital(
         W("기타(구급차)");
     }
 
-    /***
+    /**
      * 응급의료기관코드
      */
     enum class Emcls(val text: String) {
