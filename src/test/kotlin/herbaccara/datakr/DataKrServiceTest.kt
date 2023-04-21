@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.TestPropertySource
 import java.io.File
+import java.time.LocalDate
 
 @SpringBootTest(
     classes = [
@@ -42,7 +43,7 @@ class DataKrServiceTest {
 
     @Test
     fun getRestDeInfo() {
-        val restDeInfo = dataKrService.getRestDeInfo(2023, 3)
+        val restDeInfo = dataKrService.getRestDeInfo(2023, 2)
         println(restDeInfo)
     }
 
@@ -66,6 +67,12 @@ class DataKrServiceTest {
 
     @Test
     fun getStanReginCdList() {
+        val stanReginCdList = dataKrService.getStanReginCdList(1, 1000)
+        println()
+    }
+
+    @Test
+    fun downloadGetStanReginCdList() {
         (1..21).forEach {
             try {
                 val stanReginCdList = dataKrService.getStanReginCdList(it, 1000)
@@ -94,6 +101,23 @@ class DataKrServiceTest {
         val level1 = rows.filter { it.sggCd == "000" }.sortedBy { it.sidoCd } // 특별시, 광역시, 도
         val level2 = rows.filter { it.sggCd != "000" && it.umdCd == "000" }
             .sortedWith(compareBy({ it.sidoCd }, { it.locatOrder }))
+        println()
+    }
+
+    @Test
+    fun businessNoValidate() {
+        val result = dataKrService.businessNoValidate(
+            "120-81-47521",
+            LocalDate.of(1995, 2, 16),
+            "남궁훈"
+        )
+
+        println()
+    }
+
+    @Test
+    fun businessNoStatus() {
+        val result = dataKrService.businessNoStatus("220-81-62517")
         println()
     }
 }

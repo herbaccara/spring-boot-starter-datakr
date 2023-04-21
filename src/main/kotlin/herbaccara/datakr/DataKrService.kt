@@ -1,5 +1,7 @@
 package herbaccara.datakr
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import herbaccara.boot.autoconfigure.datakr.DataKrProperties
 import herbaccara.datakr.model.HolidayResult
@@ -9,16 +11,29 @@ import kotlinx.coroutines.*
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.getForObject
+import org.springframework.web.client.postForObject
 import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
 import java.net.URLEncoder
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class DataKrService(
     private val restTemplate: RestTemplate,
+    private val objectMapper: ObjectMapper,
     private val xmlMapper: XmlMapper,
     private val properties: DataKrProperties
 ) {
-    private fun <T> getForObject(uri: String, params: Map<String, Any?>, clazz: Class<T>): T {
+    internal enum class Format {
+        XML, JSON
+    }
+
+    private fun <T> getForObject(
+        uri: String,
+        params: Map<String, Any?>,
+        clazz: Class<T>,
+        format: Format = Format.JSON
+    ): T {
         val endpoint = UriComponentsBuilder
             .fromHttpUrl("${properties.rootUri}$uri")
             .queryParams(
@@ -34,7 +49,13 @@ class DataKrService(
 
         val body: String = restTemplate.getForObject(URI(endpoint))
 
-        return xmlMapper.readValue(body, clazz)
+        return when (format) {
+            Format.XML -> xmlMapper.readValue(body, clazz) as T
+            Format.JSON -> {
+                val jsonNode = objectMapper.readTree(body)
+                objectMapper.readValue(jsonNode.get("response").toString(), clazz)
+            }
+        }
     }
 
     /**
@@ -122,7 +143,8 @@ class DataKrService(
                 "type" to "xml",
                 "locatadd_nm" to locataddNm
             ),
-            StanReginCd::class.java
+            StanReginCd::class.java,
+            Format.XML
         )
     }
 
@@ -146,5 +168,74 @@ class DataKrService(
         val list = mutableListOf<StanReginCd>()
         getStanReginCdList(numOfRows, list::add)
         return list
+    }
+
+    /**
+     * 국세청_사업자등록정보 진위확인
+     * https://www.data.go.kr/data/15081808/openapi.do
+     *
+     * @param bNo 사업자등록번호
+     * @param startDt 개업일자
+     * @param pNm 대표자성명
+     * @param pNm2 대표자성명2
+     * @param corpNo 법인등록번호
+     * @param bSector 주업태명
+     * @param bType 주종목명
+     */
+    @JvmOverloads
+    fun businessNoValidate(
+        bNo: String,
+        startDt: LocalDate,
+        pNm: String,
+        pNm2: String? = null,
+        bNm: String? = null,
+        corpNo: String? = null,
+        bSector: String? = null,
+        bType: String? = null
+    ): JsonNode {
+        val endpoint = UriComponentsBuilder
+            .fromHttpUrl("https://api.odcloud.kr/api/nts-businessman/v1/validate")
+            .queryParam("returnType", "JSON")
+            .queryParam("serviceKey", URLEncoder.encode(properties.serviceKey, "UTF-8"))
+            .build(false)
+            .toUriString()
+
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+
+        val map = mapOf(
+            "businesses" to listOf(
+                mapOf(
+                    "b_no" to bNo.replace("-", ""),
+                    "start_dt" to startDt.format(dateFormatter),
+                    "p_nm" to pNm,
+                    "p_nm2" to (pNm2 ?: ""),
+                    "b_nm" to (bNm ?: ""),
+                    "corp_no" to (corpNo?.replace("-", "") ?: ""),
+                    "b_sector" to (bSector ?: ""),
+                    "b_type" to (bType ?: "")
+                )
+            )
+        )
+
+        return restTemplate.postForObject(URI(endpoint), map)
+    }
+
+    /**
+     * 국세청_사업자등록정보 상태조회
+     * https://www.data.go.kr/data/15081808/openapi.do
+     *
+     * @param bNo 사업자등록번호
+     */
+    fun businessNoStatus(vararg bNo: String): JsonNode {
+        val endpoint = UriComponentsBuilder
+            .fromHttpUrl("https://api.odcloud.kr/api/nts-businessman/v1/status")
+            .queryParam("returnType", "JSON")
+            .queryParam("serviceKey", URLEncoder.encode(properties.serviceKey, "UTF-8"))
+            .build(false)
+            .toUriString()
+
+        val map = mapOf("b_no" to bNo.map { it.replace("-", "") }.toList())
+
+        return restTemplate.postForObject(URI(endpoint), map)
     }
 }

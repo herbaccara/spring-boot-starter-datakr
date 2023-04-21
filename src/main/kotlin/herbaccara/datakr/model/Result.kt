@@ -10,9 +10,11 @@ open class Result<T>(
     )
 
     data class Body<T>(
-        val items: List<T>,
+        val items: Items<T>?,
         val numOfRows: Int,
         val pageNo: Int,
         val totalCount: Int
     )
+
+    data class Items<T>(val item: List<T>)
 }
