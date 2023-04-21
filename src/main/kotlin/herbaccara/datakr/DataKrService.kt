@@ -28,6 +28,12 @@ class DataKrService(
         XML, JSON
     }
 
+    private fun serviceKey(): String {
+        return properties.serviceKey.let {
+            if (it.endsWith("==")) URLEncoder.encode(it, "UTF-8") else it
+        }
+    }
+
     private fun <T> getForObject(
         uri: String,
         params: Map<String, Any?>,
@@ -45,7 +51,9 @@ class DataKrService(
                     }
                 }
             )
-            .toUriString() + "&ServiceKey=" + URLEncoder.encode(properties.serviceKey, "UTF-8")
+            .queryParam("ServiceKey", serviceKey())
+            .build(false)
+            .toUriString()
 
         val body: String = restTemplate.getForObject(URI(endpoint))
 
@@ -230,7 +238,7 @@ class DataKrService(
         val endpoint = UriComponentsBuilder
             .fromHttpUrl("https://api.odcloud.kr/api/nts-businessman/v1/status")
             .queryParam("returnType", "JSON")
-            .queryParam("serviceKey", URLEncoder.encode(properties.serviceKey, "UTF-8"))
+            .queryParam("serviceKey", serviceKey())
             .build(false)
             .toUriString()
 

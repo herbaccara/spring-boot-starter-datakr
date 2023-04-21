@@ -43,7 +43,7 @@ class DataKrServiceTest {
 
     @Test
     fun getRestDeInfo() {
-        val restDeInfo = dataKrService.getRestDeInfo(2023, 2)
+        val restDeInfo = dataKrService.getRestDeInfo(2023, 3)
         println(restDeInfo)
     }
 
