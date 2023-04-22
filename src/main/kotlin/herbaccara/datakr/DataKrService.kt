@@ -1,12 +1,10 @@
 package herbaccara.datakr
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import herbaccara.boot.autoconfigure.datakr.DataKrProperties
-import herbaccara.datakr.model.HolidayResult
-import herbaccara.datakr.model.HopitalResult
-import herbaccara.datakr.model.StanReginCd
+import herbaccara.datakr.form.BusinessNoValidateForm
+import herbaccara.datakr.model.*
 import kotlinx.coroutines.*
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestTemplate
@@ -16,7 +14,6 @@ import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
 import java.net.URLEncoder
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 class DataKrService(
     private val restTemplate: RestTemplate,
@@ -179,13 +176,13 @@ class DataKrService(
     }
 
     /**
-     * 국세청_사업자등록정보 진위확인
-     * https://www.data.go.kr/data/15081808/openapi.do
+     * @see <a href="https://www.data.go.kr/data/15081808/openapi.do#/%EC%82%AC%EC%97%85%EC%9E%90%EB%93%B1%EB%A1%9D%EC%A0%95%EB%B3%B4%20%EC%A7%84%EC%9C%84%ED%99%95%EC%9D%B8%20API/validate">국세청_사업자등록정보 진위확인</a>
      *
      * @param bNo 사업자등록번호
      * @param startDt 개업일자
      * @param pNm 대표자성명
      * @param pNm2 대표자성명2
+     * @param bNm 상호
      * @param corpNo 법인등록번호
      * @param bSector 주업태명
      * @param bType 주종목명
@@ -200,7 +197,25 @@ class DataKrService(
         corpNo: String? = null,
         bSector: String? = null,
         bType: String? = null
-    ): JsonNode {
+    ): BusinessNoValidateResult {
+        return businessNoValidate(
+            BusinessNoValidateForm(
+                bNo.replace("-", ""),
+                startDt,
+                pNm,
+                pNm2 ?: "",
+                bNm ?: "",
+                corpNo?.replace("-", "") ?: "",
+                bSector ?: "",
+                bType ?: ""
+            )
+        )
+    }
+
+    /**
+     * @see <a href="https://www.data.go.kr/data/15081808/openapi.do#/%EC%82%AC%EC%97%85%EC%9E%90%EB%93%B1%EB%A1%9D%EC%A0%95%EB%B3%B4%20%EC%A7%84%EC%9C%84%ED%99%95%EC%9D%B8%20API/validate">국세청_사업자등록정보 진위확인</a>
+     */
+    fun businessNoValidate(vararg form: BusinessNoValidateForm): BusinessNoValidateResult {
         val endpoint = UriComponentsBuilder
             .fromHttpUrl("https://api.odcloud.kr/api/nts-businessman/v1/validate")
             .queryParam("returnType", "JSON")
@@ -208,33 +223,17 @@ class DataKrService(
             .build(false)
             .toUriString()
 
-        val dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
-
-        val map = mapOf(
-            "businesses" to listOf(
-                mapOf(
-                    "b_no" to bNo.replace("-", ""),
-                    "start_dt" to startDt.format(dateFormatter),
-                    "p_nm" to pNm,
-                    "p_nm2" to (pNm2 ?: ""),
-                    "b_nm" to (bNm ?: ""),
-                    "corp_no" to (corpNo?.replace("-", "") ?: ""),
-                    "b_sector" to (bSector ?: ""),
-                    "b_type" to (bType ?: "")
-                )
-            )
-        )
+        val map = mapOf("businesses" to form.toList())
 
         return restTemplate.postForObject(URI(endpoint), map)
     }
 
     /**
-     * 국세청_사업자등록정보 상태조회
-     * https://www.data.go.kr/data/15081808/openapi.do
+     * @see <a href="https://www.data.go.kr/data/15081808/openapi.do#/%EC%82%AC%EC%97%85%EC%9E%90%EB%93%B1%EB%A1%9D%20%EC%83%81%ED%83%9C%EC%A1%B0%ED%9A%8C%20API/status">국세청_사업자등록정보 상태조회</a>
      *
      * @param bNo 사업자등록번호
      */
-    fun businessNoStatus(vararg bNo: String): JsonNode {
+    fun businessNoStatus(vararg bNo: String): BusinessNoStatusResult {
         val endpoint = UriComponentsBuilder
             .fromHttpUrl("https://api.odcloud.kr/api/nts-businessman/v1/status")
             .queryParam("returnType", "JSON")
