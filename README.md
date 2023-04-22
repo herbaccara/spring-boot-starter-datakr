@@ -1,6 +1,9 @@
 # spring-boot-starter-datakr
 spring boot starter datakr. data.go.kr 공공데이터 스프링부트용 라이브러리
 
+## How to
+[https://jitpack.io/#herbaccara/spring-boot-starter-datakr](https://jitpack.io/#herbaccara/spring-boot-starter-datakr)
+
 ## Supported APIs
 [국립중앙의료원_국립중앙의료원_전국 병·의원 찾기 서비스 - 병/의원 FullData 내려받기](https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15000736)
 
