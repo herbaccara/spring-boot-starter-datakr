@@ -25,9 +25,11 @@ class DataKrService(
         XML, JSON
     }
 
+    private fun String.urlEncode(): String = URLEncoder.encode(this, "UTF-8")
+
     private fun serviceKey(): String {
         return properties.serviceKey.let {
-            if (it.endsWith("==")) URLEncoder.encode(it, "UTF-8") else it
+            if (it.endsWith("==")) it.urlEncode() else it
         }
     }
 
@@ -43,7 +45,7 @@ class DataKrService(
                 LinkedMultiValueMap<String, String>().apply {
                     for ((k, v) in params) {
                         if (v != null) {
-                            add(k, v.toString())
+                            add(k, if (v is String) v.urlEncode() else v.toString())
                         }
                     }
                 }
@@ -219,7 +221,7 @@ class DataKrService(
         val endpoint = UriComponentsBuilder
             .fromHttpUrl("https://api.odcloud.kr/api/nts-businessman/v1/validate")
             .queryParam("returnType", "JSON")
-            .queryParam("serviceKey", URLEncoder.encode(properties.serviceKey, "UTF-8"))
+            .queryParam("serviceKey", serviceKey())
             .build(false)
             .toUriString()
 

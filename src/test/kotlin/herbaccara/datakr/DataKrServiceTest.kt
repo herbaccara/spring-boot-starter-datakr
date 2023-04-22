@@ -72,6 +72,12 @@ class DataKrServiceTest {
     }
 
     @Test
+    fun getStanReginCdList_locataddNm() {
+        val stanReginCdList = dataKrService.getStanReginCdList(1, 1000, "서울특별시")
+        println()
+    }
+
+    @Test
     fun downloadGetStanReginCdList() {
         (1..21).forEach {
             try {
